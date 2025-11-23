@@ -110,8 +110,6 @@ for i in range(len(mu_f)):
     kappa = sol.y[0:6, :]  # 6 curvature segments
 
     
-
-    
 wave_lengths = []
 for i in range(len(mu_f)):
     sol = sols[i]
