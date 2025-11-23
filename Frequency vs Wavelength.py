@@ -162,7 +162,7 @@ plt.figure(figsize=(10,4))
 plt.plot(wave_lengths, frequencies, marker='o', color='k')
 plt.xlabel('Normalised Wavelength', fontsize=14)
 plt.ylabel('Frequency (Hz)', fontsize=14)
-plt.title('Frequency vs Fluid Viscosity', fontsize=16)
+plt.title('Frequency vs Normalised Wavelength', fontsize=16)
 plt.show()
 
 print("--- %s seconds ---" % (time.time() - start_time))
