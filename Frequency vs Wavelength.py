@@ -89,9 +89,9 @@ def ODEs(t, state, C_Nval):
     return results
 
 
-T = 100
+T = 30
 dt = 0.01
-t_eval = np.arange(0, T, dt)
+t_eval = np.arange(20, T, dt)
 
 # initial conditions
 state = np.zeros(30)
@@ -167,3 +167,7 @@ plt.show()
 
 
 print("--- %s seconds ---" % (time.time() - start_time))
+
+# Currently our model does not show the same trend as experimental data for frequency vs fluid viscosity.
+# In experiments, as fluid viscosity increases, frequency decreases. ~1.7 - 0.3Hz Fang et al
+# vs ~1.53 - 1.48Hz in our model.

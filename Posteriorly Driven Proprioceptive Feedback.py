@@ -91,9 +91,9 @@ def ODEs(t, state, C_Nval):
     return results
 
 
-T = 30
+T = 30 
 dt = 0.01
-t_eval = np.arange(20, T, dt)
+t_eval = np.arange(20, T, dt) # start time at 20s to avoid transients
 
 # initial conditions
 state = np.zeros(30)

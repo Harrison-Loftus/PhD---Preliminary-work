@@ -90,7 +90,7 @@ def ODEs(t, state, C_Nval):
 
 T = 30
 dt = 0.01
-t_eval = np.arange(20, T, dt)
+t_eval = np.arange(20, T, dt) # start time at 20s to avoid transients
 
 # initial conditions
 state = np.zeros(30)
@@ -151,3 +151,6 @@ plt.show()
 
                  
 print("--- %s seconds ---" % (time.time() - start_time))
+
+# Time series plots of curvature at each segment and wavelength vs fluid viscosity
+# Per Johnson's work, our model follows his trend for wavelength vs fluid viscosity

@@ -89,7 +89,7 @@ def ODEs(t, state, C_Nval):
 
 T = 30
 dt = 0.01
-t_eval = np.arange(20, T, dt)
+t_eval = np.arange(20, T, dt) # start time at 20s to avoid transients
 
 # initial conditions
 state = np.zeros(30)
@@ -118,3 +118,7 @@ for i in range(len(mu_f)):
 
 
 print("--- %s seconds ---" % (time.time() - start_time))
+
+# Kymograph plots of curvature for each fluid viscosity
+# Initially, was unclear on whether a travelling wave would form in high viscosity fluids
+# However, after adjusting the simulation time to be t in [20,30]s to avoid transients, travelling waves are visible
