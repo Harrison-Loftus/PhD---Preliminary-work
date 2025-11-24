@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+from scipy.signal import hilbert
+from scipy.signal import find_peaks
 import time
 
 start_time = time.time()
@@ -37,7 +39,9 @@ W_p = np.array([[0,0,0,0,0,0],
                 [0,1,0,0,0,0],
                 [0,0,1,0,0,0],
                 [0,0,0,1,0,0],
-                [0,0,0,0,1,0]], float)
+                [0,0,0,0,1,0]], float) # anterior proprioceptive coupling
+
+W_p = W_p.T # transpose to get posterior proprioceptive coupling
 
 W_g = np.array([[-1,1,0,0,0,0],
                 [1,-2,1,0,0,0],
@@ -102,19 +106,51 @@ for C_Nval in C_N:
     sols.append(sol)
 
 
-for i in range(len(mu_f)):
+for i in range(len(mu_f)): 
     sol = sols[i]
     time1 = sol.t
-    kappa = sol.y[0:6, :]
+    kappa = sol.y[0:6, :]  # 6 curvature segments
 
-    plt.figure(figsize=(8,4))
-    plt.imshow(kappa, aspect='auto', extent=[time1[0], time1[-1], 0, L], origin='lower', cmap='seismic')
-    plt.colorbar(label='Curvature (1/mm)')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Body Length (mm)')
-    plt.title(f'Kymograph of Curvature (μ_f = {mu_f_mPas[i]:.1e} mPa·s)')
-    plt.tight_layout()
+    plt.figure(figsize=(8, 5))
+    for j in range(6):
+        plt.plot(time1, kappa[j, :], label=f"Module {j+1}")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Curvature κ (1/mm)")
+    plt.title(f"Curvature vs Time for μ_f = {mu_f_mPas[i]:.1e} mPa·s")
+    plt.legend()
     plt.show()
+
+    
+wave_lengths = []
+for i in range(len(mu_f)):
+    sol = sols[i]
+    kappa = sol.y[0:6, :]
+    phase_1 = np.unwrap(np.angle(hilbert(kappa[0,:])))
+    phase_2 = np.unwrap(np.angle(hilbert(kappa[1,:])))
+    phase_3 = np.unwrap(np.angle(hilbert(kappa[2,:])))
+    phase_4 = np.unwrap(np.angle(hilbert(kappa[3,:])))
+    phase_5 = np.unwrap(np.angle(hilbert(kappa[4,:])))
+    phase_6 = np.unwrap(np.angle(hilbert(kappa[5,:])))
+
+
+    phi_1 = np.mean(((phase_2 - phase_1) % (2*np.pi)) / (2*np.pi))
+    phi_2 = np.mean(((phase_3 - phase_2) % (2*np.pi)) / (2*np.pi))
+    phi_3 = np.mean(((phase_4 - phase_3) % (2*np.pi)) / (2*np.pi))
+    phi_4 = np.mean(((phase_5 - phase_4) % (2*np.pi)) / (2*np.pi))
+    phi_5 = np.mean(((phase_6 - phase_5) % (2*np.pi)) / (2*np.pi))
+
+    phi = np.array([phi_1, phi_2, phi_3, phi_4, phi_5])
+    lam_over_L = (1/6) * 5 / np.sum(1 - phi) # as per appendix A.1.3 carter johnson
+    
+    wave_lengths.append(lam_over_L)
+
+plt.figure(figsize=(10, 4))
+plt.plot(mu_f_mPas, wave_lengths, marker='o', color='k')
+plt.xscale('log')
+plt.xlabel("Fluid Viscosity μ_f (mPa·s)")
+plt.ylabel("Normalised Wavelength λ/L")
+plt.title("Normalised Wavelength vs Fluid Viscosity")
+plt.show()
 
 
 print("--- %s seconds ---" % (time.time() - start_time))

@@ -10,7 +10,7 @@ start_time = time.time()
 L = 1.0  # body length mm
 R = 40.0e-3  # average body radius mm
 r_c = 0.5e-3  # cuticle width mm
-E_kPa = 100 # young's modulus kPa
+E_kPa = 1000 # young's modulus kPa
 E = E_kPa * 1e-3 # convert to N/mm^2
 I_c = 2.0e-7 # second moment of cuticle area mm^4
 k_b = E * I_c # bending viscosity N·mm^2
@@ -18,7 +18,7 @@ mu_b = 1.3e-7 # body viscocity N·mm²·s
 mu_f_mPas = np.array([1.0,10.0,1e2,1e3,2.8e4]) # fluid viscocity mPa·s
 mu_f = mu_f_mPas * 1e-9 # N·s/mm^2
 C_N = 3.4 * mu_f # normal drag coefficient N·s/mm^2
-tao_b = 0.5 # mechanical timescale seconds
+tao_b = mu_b / k_b # mechanical timescale seconds
 tao_m = 100.0e-3 # muscle activation timescale seconds
 tao_n = 10.0e-3 # neural activity timescale seconds
 l = 1.0 / 6.0 # segment length
@@ -72,8 +72,8 @@ def ODEs(t, state, C_Nval):
     V_V = state[3*n:4*n]
     V_D = state[4*n:5*n]
     
-    epsilon_g = 0.01
-    epsilon_p = 10 * epsilon_g # arbitrarily chosen to fit λ/L ≈ 1.6
+    epsilon_g = 0.0134
+    epsilon_p = 0.05 # arbitrarily chosen to fit λ/L ≈ 1.6
     c_p = 1
     
     M = C_Nval * I_6 + mu_b * D_4
@@ -88,9 +88,9 @@ def ODEs(t, state, C_Nval):
     return results
 
 
-T = 100
+T = 30
 dt = 0.01
-t_eval = np.arange(0, T, dt)
+t_eval = np.arange(20, T, dt)
 
 # initial conditions
 state = np.zeros(30)
