@@ -135,22 +135,28 @@ for i in range(len(mu_f)):
     
 
 frequencies = []
-for i in range(len(mu_f)):
+average_frequencies = []
+for i in range(len(mu_f)): # altered to compute average frequency over all segments
     sol = sols[i]
-    kappa = sol.y[0, :]
-    time1 = sol.t
+    for j in range(6):
+        kappa = sol.y[j, :]
+        time1 = sol.t
 
-    peaks, _ = find_peaks(kappa, height=0.2, prominence=0.4)
-    peak_times = time1[peaks]
-    periods = np.diff(peak_times)
-    average_period = np.mean(periods)
-    frequency = 1 / average_period
+        peaks, _ = find_peaks(kappa, height=0.01)
+        peak_times = time1[peaks]
+        periods = np.diff(peak_times)
+        average_period = np.mean(periods)
+        frequency = 1 / average_period
 
-    frequencies.append(frequency)
+        frequencies.append(frequency)
+    average_frequency = np.mean(frequencies)
+    average_frequencies.append(average_frequency)
+    frequencies = []  # reset for next mu_f
+
 
 
 plt.figure(figsize=(10,4))
-plt.plot(mu_f_mPas, frequencies, marker='o', color='k')
+plt.plot(mu_f_mPas, average_frequencies, marker='o', color='k')
 plt.xscale('log')
 plt.xlabel('Fluid Viscosity (mPa·s)', fontsize=14)
 plt.ylabel('Frequency (Hz)', fontsize=14)
@@ -159,7 +165,7 @@ plt.show()
 
 
 plt.figure(figsize=(10,4))
-plt.plot(wave_lengths, frequencies, marker='o', color='k')
+plt.plot(wave_lengths, average_frequencies, marker='o', color='k')
 plt.xlabel('Normalised Wavelength', fontsize=14)
 plt.ylabel('Frequency (Hz)', fontsize=14)
 plt.title('Frequency vs Normalised Wavelength', fontsize=16)
