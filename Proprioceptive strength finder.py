@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+from scipy.signal import hilbert
+from scipy.signal import find_peaks
 import time
 
 start_time = time.time()
@@ -37,7 +39,9 @@ W_p = np.array([[0,0,0,0,0,0],
                 [0,1,0,0,0,0],
                 [0,0,1,0,0,0],
                 [0,0,0,1,0,0],
-                [0,0,0,0,1,0]], float)
+                [0,0,0,0,1,0]], float) # anterior proprioceptive coupling
+
+W_p = -W_p.T # transpose to get posterior proprioceptive coupling, changed sign to ensure polarity of bending feedback is consistent 
 
 W_g = np.array([[-1,1,0,0,0,0],
                 [1,-2,1,0,0,0],
@@ -62,7 +66,7 @@ def F(V):
     return V - V**3 
 
 
-def ODEs(t, state, C_Nval):
+def ODEs(t, state, C_Nval, epsilon_p):
     n = 6 # body segments
     kappa = state[0:n]
 
@@ -72,7 +76,8 @@ def ODEs(t, state, C_Nval):
     V_D = state[4*n:5*n]
     
     epsilon_g = 0.0134
-    epsilon_p = 0.05 # arbitrarily chosen to fit λ/L ≈ 1.6
+
+    
     c_p = 1.0
     
     M = C_Nval * I_6 + mu_b * D_4
@@ -87,7 +92,7 @@ def ODEs(t, state, C_Nval):
     return results
 
 
-T = 30
+T = 30 
 dt = 0.01
 t_eval = np.arange(20, T, dt) # start time at 20s to avoid transients
 
@@ -97,28 +102,67 @@ state[18] = 1 # asymmetric perturbation in ventral and dorsal muscles
 state[24] = -1
 sols = []
 
-for C_Nval in C_N:
-    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='BDF', atol=1e-7, rtol=1e-6, max_step=0.05 )
-    sols.append(sol)
+def bisection_method_epsilon_p(target_range, C_Nval, tol=1e-3, max_iter=30):
+
+    # bisection bounds
+    eps_low = 0.0
+    eps_high = 1.0  
+
+    def compute_lambda_over_L(epsilon_p):
+
+        # solve ODE with given epsilon_p
+        sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval,
+                        args=(C_Nval, epsilon_p),
+                        method='BDF', atol=1e-7, rtol=1e-6, max_step=0.05)
+
+        kappa = sol.y[0:6, :]
+
+        # phases
+        phase_1 = np.unwrap(np.angle(hilbert(kappa[0, :])))
+        phase_2 = np.unwrap(np.angle(hilbert(kappa[1, :])))
+        phase_3 = np.unwrap(np.angle(hilbert(kappa[2, :])))
+        phase_4 = np.unwrap(np.angle(hilbert(kappa[3, :])))
+        phase_5 = np.unwrap(np.angle(hilbert(kappa[4, :])))
+        phase_6 = np.unwrap(np.angle(hilbert(kappa[5, :])))
+
+        phi_1 = np.mean(((phase_2 - phase_1) % (2*np.pi)) / (2*np.pi))
+        phi_2 = np.mean(((phase_3 - phase_2) % (2*np.pi)) / (2*np.pi))
+        phi_3 = np.mean(((phase_4 - phase_3) % (2*np.pi)) / (2*np.pi))
+        phi_4 = np.mean(((phase_5 - phase_4) % (2*np.pi)) / (2*np.pi))
+        phi_5 = np.mean(((phase_6 - phase_5) % (2*np.pi)) / (2*np.pi))
+
+        phi = np.array([phi_1, phi_2, phi_3, phi_4, phi_5])
+
+        lam_over_L = (1/6) * 5 / np.sum(1 - phi)
+
+        return lam_over_L
+
+    
+    for _ in range(max_iter): # bisection loop
+
+        eps_mid = 0.5 * (eps_low + eps_high)
+        lam_mid = compute_lambda_over_L(eps_mid)
+
+        
+        if target_range[0] <= lam_mid <= target_range[1]: # check if mid is inside desired range
+            return eps_mid, lam_mid
+
+        
+        if lam_mid < target_range[0]: # if λ/L too small, decrease proprioception
+            eps_high = eps_mid
+
+        
+        else: # if λ/L too large, increase proprioception
+            eps_low = eps_mid
+
+        if abs(eps_high - eps_low) < tol:
+            return eps_mid, lam_mid
+
+    return eps_mid, lam_mid
 
 
-for i in range(len(mu_f)):
-    sol = sols[i]
-    time1 = sol.t
-    kappa = sol.y[0:6, :]
-
-    plt.figure(figsize=(8,4))
-    plt.imshow(kappa, aspect='auto', extent=[time1[0], time1[-1], 0, L], origin='lower', cmap='seismic')
-    plt.colorbar(label='Curvature (1/mm)')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Body Length (mm)')
-    plt.title(f'Kymograph of Curvature (μ_f = {mu_f_mPas[i]:.1e} mPa·s)')
-    plt.tight_layout()
-    plt.show()
-
-
-print("--- %s seconds ---" % (time.time() - start_time))
-
-# Kymograph plots of curvature for each fluid viscosity
-# Initially, was unclear on whether a travelling wave would form in high viscosity fluids
-# However, after adjusting the simulation time to be t in [20,30]s to avoid transients, travelling waves are visible
+target_range = (1.5, 1.7)
+C_N_water = C_N[0]  
+epsilon_p, lambda_estimate = bisection_method_epsilon_p(target_range, C_N_water)
+print(epsilon_p)
+print(lambda_estimate)

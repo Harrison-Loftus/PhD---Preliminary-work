@@ -18,9 +18,9 @@ mu_b = 1.3e-7 # body viscocity N·mm²·s
 mu_f_mPas = np.array([1.0,10.0,1e2,1e3,2.8e4]) # fluid viscocity mPa·s
 mu_f = mu_f_mPas * 1e-9 # N·s/mm^2
 C_N = 3.4 * mu_f # normal drag coefficient N·s/mm^2
-tao_b = mu_b / k_b # mechanical timescale seconds
-tao_m = 100.0e-3 # muscle activation timescale seconds
-tao_n = 10.0e-3 # neural activity timescale seconds
+tau_b = mu_b / k_b # mechanical timescale seconds
+tau_m = 100.0e-3 # muscle activation timescale seconds
+tau_n = 10.0e-3 # neural activity timescale seconds
 n = 12 # number of body segments
 l = 1.0 / n # segment length 1 / n
 
@@ -95,11 +95,13 @@ def ODEs(t, state, C_Nval):
     
     M = C_Nval * I_6 + mu_b * D_4
     dkappadt = np.linalg.solve(M, Kmat @ (kappa + (sigma(A_V) - sigma(A_D))))
-    dA_Vdt = (1/tao_m)*(-A_V + V_V - V_D)
-    dA_Ddt = (1/tao_m)*(-A_D + V_D - V_V) 
+    dA_Vdt = (1/tau_m)*(-A_V + V_V - V_D)
+    dA_Ddt = (1/tau_m)*(-A_D + V_D - V_V) 
 
-    dV_Vdt = (1/tao_n)*(F(V_V) + c_p * kappa - epsilon_p * W_p @ kappa + epsilon_g * W_g @ V_V)
-    dV_Ddt = (1/tao_n)*(F(V_D) - c_p * kappa + epsilon_p * W_p @ kappa + epsilon_g * W_g @ V_D) 
+
+    dV_Vdt = (1/tau_n)*(F(V_V) + c_p * kappa - epsilon_p * W_p @ kappa + epsilon_g * W_g @ V_V)
+    dV_Ddt = (1/tau_n)*(F(V_D) - c_p * kappa + epsilon_p * W_p @ kappa + epsilon_g * W_g @ V_D) # carter johnson's paper uses V_V as final term in eq 2.1, unsure if this is an error
+
     results = np.concatenate([dkappadt, dA_Vdt, dA_Ddt, dV_Vdt, dV_Ddt])
 
     return results
