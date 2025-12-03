@@ -80,7 +80,7 @@ def F(V):
     return V - V**3 
 
 
-def ODEs(t, state, C_Nval):
+def ODEs(t, state, C_Nval, epsilon_p):
 
     kappa = state[0:n]
 
@@ -90,7 +90,7 @@ def ODEs(t, state, C_Nval):
     V_D = state[4*n:5*n]
     
     epsilon_g = 0.0134
-    epsilon_p = 0.0234375 # arbitrarily chosen to fit λ/L ≈ 1.6, as per bisection method
+    
     c_p = 1
     
     M = C_Nval * I_6 + mu_b * D_4
@@ -117,60 +117,74 @@ state[3*n] = 1 # asymmetric perturbation in ventral and dorsal muscles
 state[4*n] = -1
 sols = []
 
-for C_Nval in C_N:
-    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='Radau', atol=1e-7, rtol=1e-6, max_step=0.05 )
-    sols.append(sol)
 
-mid = n // 2
-for i in range(len(mu_f)): 
-    sol = sols[i]
-    time1 = sol.t
-    kappa = sol.y[0:n, :]  # n curvature segments
+def bisection_method_epsilon_p(target_range, C_Nval, tol=1e-3, max_iter=30):
 
-    plt.figure(figsize=(8, 5))
-    for j in range(mid - 3, mid + 3):
-        plt.plot(time1, kappa[j, :], label=f"Module {j+1}")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Curvature κ (1/mm)")
-    plt.title(f"Curvature vs Time for μ_f = {mu_f_mPas[i]:.1e} mPa·s")
-    plt.legend()
-    plt.show()
+    # bisection bounds
+    eps_low = 0.0
+    eps_high = 1.0  
 
-    
-wave_lengths = []
+    def compute_lambda_over_L(epsilon_p):
 
-for i in range(len(mu_f)):
-    sol = sols[i]
-    kappa = sol.y[0:n, :]            
+        # solve ODE with given epsilon_p
+        sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval,
+                        args=(C_Nval, epsilon_p),
+                        method='BDF', atol=1e-7, rtol=1e-6, max_step=0.05)
 
-    # compute instantaneous phase per segment
-    phase_segments = []
-    for j in range(n):
-        analytic_signal = hilbert(kappa[j, :])
-        instantaneous_phase = np.angle(analytic_signal)
-        phase_segments.append(instantaneous_phase)
-
-    # compute mean phase difference (phi_j) between adjacent segments
-    phi_j_list = []
-    for j in range(n-1):
         
-        phase_diff = np.unwrap(phase_segments[j+1]) - np.unwrap(phase_segments[j])
-        phi_j = np.mean(phase_diff) % (2*np.pi) / (2*np.pi)   # mean phase difference in cycles
-        phi_j_list.append(phi_j)
+        kappa = sol.y[0:n, :]            
 
-    # convert to numpy array and compute lambda/L 
-    phi_arr = np.array(phi_j_list)
-    lam_over_L = ((n-1)/n) / np.sum(1.0 - phi_arr)   
-    wave_lengths.append(lam_over_L)
+        # compute instantaneous phase per segment
+        phase_segments = []
+        for j in range(n):
+            analytic_signal = hilbert(kappa[j, :])
+            instantaneous_phase = np.angle(analytic_signal)
+            phase_segments.append(instantaneous_phase)
+
+        # compute mean phase difference (phi_j) between adjacent segments
+        phi_j_list = []
+        for j in range(n-1):
+        
+            phase_diff = np.unwrap(phase_segments[j+1]) - np.unwrap(phase_segments[j])
+            phi_j = np.mean(phase_diff) % (2*np.pi) / (2*np.pi)  # mean phase difference in cycles
+            phi_j_list.append(phi_j)
+
+        # convert to numpy array and compute lambda/L 
+        phi_arr = np.array(phi_j_list)
+        lam_over_L = ((n-1)/n) / np.sum(1.0 - phi_arr)   
+
+        return lam_over_L
+
     
+    for _ in range(max_iter): # bisection loop
 
-plt.figure(figsize=(10, 4))
-plt.plot(mu_f_mPas, wave_lengths, marker='o', color='k')
-plt.xscale('log')
-plt.xlabel("Fluid Viscosity μ_f (mPa·s)")
-plt.ylabel("Normalised Wavelength λ/L")
-plt.title("Normalised Wavelength vs Fluid Viscosity")
-plt.show()
+        eps_mid = 0.5 * (eps_low + eps_high)
+        lam_mid = compute_lambda_over_L(eps_mid)
 
-                 
-print("--- %s seconds ---" % (time.time() - start_time))
+        
+        if target_range[0] <= lam_mid <= target_range[1]: # check if mid is inside desired range
+            return eps_mid, lam_mid
+
+        
+        if lam_mid < target_range[0]: # if λ/L too small, decrease proprioception
+            eps_high = eps_mid
+
+        
+        else: # if λ/L too large, increase proprioception
+            eps_low = eps_mid
+
+        if abs(eps_high - eps_low) < tol:
+            return eps_mid, lam_mid
+
+    return eps_mid, lam_mid
+
+
+target_range = (1.5, 1.7)
+C_N_water = C_N[0]  
+epsilon_p, lambda_estimate = bisection_method_epsilon_p(target_range, C_N_water)
+print(epsilon_p)
+print(lambda_estimate)
+
+
+# n = 12 segments: 0.0234375 proprioceptive strength
+#                  1.6694183145153845 normalised wavelength

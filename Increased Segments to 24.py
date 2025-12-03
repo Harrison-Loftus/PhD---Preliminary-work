@@ -154,7 +154,7 @@ for i in range(len(mu_f)):
     for j in range(n-1):
         
         phase_diff = np.unwrap(phase_segments[j+1]) - np.unwrap(phase_segments[j])
-        phi_j = np.mean(phase_diff) / (2.0 * np.pi)   # mean phase difference in cycles
+        phi_j = np.mean(phase_diff) % (2*np.pi) / (2*np.pi)    # mean phase difference in cycles
         phi_j_list.append(phi_j)
 
     # convert to numpy array and compute lambda/L 
