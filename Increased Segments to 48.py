@@ -90,7 +90,7 @@ def ODEs(t, state, C_Nval):
     V_D = state[4*n:5*n]
     
     epsilon_g = 0.0134
-    epsilon_p = 0.05 # arbitrarily chosen to fit λ/L ≈ 1.6
+    epsilon_p = 0.015625 # arbitrarily chosen to fit λ/L ≈ 1.6, as per bisection method
     c_p = 1
     
     M = C_Nval * I_6 + mu_b * D_4

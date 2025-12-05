@@ -21,7 +21,7 @@ C_N = 3.4 * mu_f # normal drag coefficient N·s/mm^2
 tau_b = mu_b / k_b # mechanical timescale seconds
 tau_m = 100.0e-3 # muscle activation timescale seconds
 tau_n = 10.0e-3 # neural activity timescale seconds
-n = 12 # number of body segments
+n = 96 # number of body segments
 l = 1.0 / n # segment length 1 / n
 
 
@@ -182,9 +182,19 @@ def bisection_method_epsilon_p(target_range, C_Nval, tol=1e-3, max_iter=30):
 target_range = (1.5, 1.7)
 C_N_water = C_N[0]  
 epsilon_p, lambda_estimate = bisection_method_epsilon_p(target_range, C_N_water)
+print(n)
 print(epsilon_p)
 print(lambda_estimate)
 
 
 # n = 12 segments: 0.0234375 proprioceptive strength
 #                  1.6694183145153845 normalised wavelength
+
+# n = 24 segments: 0.0234375
+#                  1.515072292026783 normalised wavelength
+
+# n = 48 segments: 0.015625
+#                  1.6905392994113186 normalised wavelength
+
+# n = 96 segments: 0.0009765625
+#                  0.07359196554465537 normalised wavelength
