@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 from scipy.signal import hilbert
+from scipy.signal import find_peaks
 import time
 
 start_time = time.time()
@@ -23,6 +24,17 @@ tau_m = 100.0e-3 # muscle activation timescale seconds
 tau_n = 10.0e-3 # neural activity timescale seconds
 l = 1.0 / 6.0 # segment length
 
+print("Normal drag coefficients as per Johnson:", C_N)
+
+# new normal drag coefficient calculation
+
+wave_lengths = np.array([1.482167349039703, 1.4613004223483992, 1.2761564500667777, 0.7174071495307974, 0.5537844285209741]) # as per Gait Adaptations of C elegans for Varying Viscosity.py
+
+q = 0.09 * wave_lengths
+
+C_N = L * (2 * np.pi * mu_f) / (np.log(2 * q / R))
+
+print("Normal drag coefficient:", C_N)
 
 D_4 = np.array([[7, -4, 1, 0, 0, 0],
                 [-4, 6, -4, 1, 0, 0],
@@ -54,13 +66,13 @@ Kmat = -k_b * D_4 # precompute once
 
 def sigma(A):
     c_m = 10
-    c_s = 1
+    c_s = 2 # increasing this from 1 -> 2 improves frequency modulation 1.4-0.9Hz over viscosity range
     a_0 = 2
     return 0.5 * c_m * (np.tanh((A - a_0)*c_s) + 1)
 
 
 def F(V):
-    return V - V**3 
+    return 1*(V - V**3)
 
 
 def ODEs(t, state, C_Nval):
@@ -74,7 +86,7 @@ def ODEs(t, state, C_Nval):
     
     epsilon_g = 0.0134
     epsilon_p = 0.05 # arbitrarily chosen to fit λ/L ≈ 1.6
-    c_p = 1
+    c_p = 1.0
     
     M = C_Nval * I_6 + mu_b * D_4
     dkappadt = np.linalg.solve(M, Kmat @ (kappa + (sigma(A_V) - sigma(A_D))))
@@ -90,7 +102,7 @@ def ODEs(t, state, C_Nval):
 
 T = 30
 dt = 0.01
-t_eval = np.arange(20, T, dt) # start time at 20s to avoid transients
+t_eval = np.arange(20, T, dt)
 
 # initial conditions
 state = np.zeros(30)
@@ -99,7 +111,7 @@ state[24] = -1
 sols = []
 
 for C_Nval in C_N:
-    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='Radau', atol=1e-7, rtol=1e-6, max_step=0.05 )
+    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='BDF', atol=1e-7, rtol=1e-6, max_step=0.05 )
     sols.append(sol)
 
 
@@ -129,6 +141,7 @@ for i in range(len(mu_f)):
     phase_5 = np.unwrap(np.angle(hilbert(kappa[4,:])))
     phase_6 = np.unwrap(np.angle(hilbert(kappa[5,:])))
 
+
     phi_1 = np.mean(((phase_2 - phase_1) % (2*np.pi)) / (2*np.pi))
     phi_2 = np.mean(((phase_3 - phase_2) % (2*np.pi)) / (2*np.pi))
     phi_3 = np.mean(((phase_4 - phase_3) % (2*np.pi)) / (2*np.pi))
@@ -140,7 +153,6 @@ for i in range(len(mu_f)):
     
     wave_lengths.append(lam_over_L)
     
-
 plt.figure(figsize=(10, 4))
 plt.plot(mu_f_mPas, wave_lengths, marker='o', color='k')
 plt.xscale('log')
@@ -149,10 +161,47 @@ plt.ylabel("Normalised Wavelength λ/L")
 plt.title("Normalised Wavelength vs Fluid Viscosity")
 plt.show()
 
-                 
-print("Wavelengths λ:", list(map(float, wave_lengths))) # since L = 1mm, λ/L = λ 
+
+frequencies = []
+average_frequencies = []
+for i in range(len(mu_f)): # altered to compute average frequency over all segments
+    sol = sols[i]
+    for j in range(6):
+        kappa = sol.y[j, :]
+        time1 = sol.t
+
+        peaks, _ = find_peaks(kappa, height=0.0)
+        peak_times = time1[peaks]
+        periods = np.diff(peak_times)
+        average_period = np.mean(periods)
+        frequency = 1 / average_period
+
+        frequencies.append(frequency)
+    average_frequency = np.mean(frequencies)
+    average_frequencies.append(average_frequency)
+    frequencies = []  # reset for next mu_f
+
+
+
+plt.figure(figsize=(10,4))
+plt.plot(mu_f_mPas, average_frequencies, marker='o', color='k')
+plt.xscale('log')
+plt.xlabel('Fluid Viscosity (mPa·s)', fontsize=14)
+plt.ylabel('Frequency (Hz)', fontsize=14)
+plt.title('Frequency vs Fluid Viscosity', fontsize=16)
+plt.show()
+
+
+plt.figure(figsize=(10,4))
+plt.plot(wave_lengths, average_frequencies, marker='o', color='k')
+plt.xlabel('Normalised Wavelength', fontsize=14)
+plt.ylabel('Frequency (Hz)', fontsize=14)
+plt.title('Frequency vs Normalised Wavelength', fontsize=16)
+plt.show()
+
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
-# Time series plots of curvature at each segment and wavelength vs fluid viscosity
-# Per Johnson's work, our model follows his trend for wavelength vs fluid viscosity
+# Currently our model does not show the same trend as experimental data for frequency vs fluid viscosity.
+# In experiments, as fluid viscosity increases, frequency decreases. ~1.7 - 0.3Hz Fang et al
+# vs ~1.53 - 1.48Hz in our model.
