@@ -151,6 +151,7 @@ for i in range(len(mu_f)):
         phase_segments.append(instantaneous_phase)
 
     # compute mean phase difference (phi_j) between adjacent segments 
+    phi_j_list = []
     for j in range(n-1):
         
         phase_diff = np.unwrap(phase_segments[j+1]) - np.unwrap(phase_segments[j])
