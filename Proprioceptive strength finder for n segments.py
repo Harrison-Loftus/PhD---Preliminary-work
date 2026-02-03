@@ -21,7 +21,7 @@ C_N = 3.4 * mu_f # normal drag coefficient N·s/mm^2
 tau_b = mu_b / k_b # mechanical timescale seconds
 tau_m = 100.0e-3 # muscle activation timescale seconds
 tau_n = 10.0e-3 # neural activity timescale seconds
-n = 96 # number of body segments
+n = 24 # number of body segments
 l = 1.0 / n # segment length 1 / n
 
 

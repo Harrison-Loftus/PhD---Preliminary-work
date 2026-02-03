@@ -144,9 +144,9 @@ for i in range(len(mu_f)):
 plt.figure(figsize=(10, 4))
 plt.plot(mu_f_mPas, wave_lengths, marker='o', color='k')
 plt.xscale('log')
-plt.xlabel("Fluid Viscosity μ_f (mPa·s)")
+plt.xlabel(r'Fluid Viscosity $\mu_\text{f}$ (mPa·s)')
 plt.ylabel("Normalised Wavelength λ/L")
-plt.title("Normalised Wavelength vs Fluid Viscosity")
+plt.title("Normalised Wavelength vs Fluid Viscosity for N = 6 Modules")
 plt.show()
 
                  

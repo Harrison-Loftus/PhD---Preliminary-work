@@ -172,5 +172,5 @@ plt.ylabel("Normalised Wavelength λ/L")
 plt.title("Normalised Wavelength vs Fluid Viscosity")
 plt.show()
 
-                 
+print("Wavelengths λ:", list(map(float, wave_lengths)))                 
 print("--- %s seconds ---" % (time.time() - start_time))
