@@ -99,7 +99,7 @@ state[24] = -1
 sols = []
 
 for C_Nval in C_N:
-    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='Radau', atol=1e-7, rtol=1e-6, max_step=0.05 )
+    sol = solve_ivp(ODEs, [0, T], state, t_eval=t_eval, args=(C_Nval,), method='RK45', atol=1e-7, rtol=1e-6, max_step=0.05 )
     sols.append(sol)
 
 
